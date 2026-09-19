@@ -28,3 +28,10 @@ Running, lane changes, falling and obstacle motion are essential gameplay. Reduc
 
 ## Verification
 Core simulation tests cover lane limits, jumping, rolling, ramp-to-roof transitions, collisions, hoverboard protection, magnets, jetpack landing, jump/score boosts, reset/pause and clear-lane spawning. Browser checks include actual rendered screenshots at desktop and mobile sizes, startup errors, pause/resume and input. This does not represent an exhaustive test of every possible procedural combination or physical mobile device.
+
+## Fullscreen and track clearance update
+Added a 44 px fullscreen toggle alongside sound/pause; narrow-screen score typography leaves room for all three controls. The button uses actual fullscreen state and adapts when fullscreen is exited externally. Unsupported browsers get a home-screen-launch explanation rather than simulated fullscreen. A web manifest and Apple standalone metadata support launching without browser chrome where available; there is no offline cache.
+
+Traffic now resolves front-to-back per lane with a three-unit buffer before solid objects. Train roof support and collision share the same longitudinal bounds. All overhead structures derive from a shared clearance specification: the jetpack's eight-unit foot height plus the full runner height plus 1.5 units of clearance. This covers ascent/descent as well as sustained flight.
+
+Verified 17 simulation/clearance tests, production build, browser fullscreen entry/exit, and a 360×800 gameplay screenshot. No physical iPhone or Android device was available for verification. Fullscreen implementation follows https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen .

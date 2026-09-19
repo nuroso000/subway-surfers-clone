@@ -1,6 +1,13 @@
 export const LANE_WIDTH = 3.35;
 export const ROOF = 3.6;
 export const POWER_DURATION = 12;
+export const JETPACK_HEIGHT = 8;
+export const RUNNER_HEIGHT = 2.6;
+export const OVERHEAD_CLEARANCE = JETPACK_HEIGHT + RUNNER_HEIGHT + 1.5;
+export const TRAIN_HALF_LENGTH = 7.3;
+export const TRAFFIC_GAP = 3;
+const solidHalfLength = entity => entity.type === 'train' ? TRAIN_HALF_LENGTH : entity.type === 'ramp' ? 4 : .4;
+const isSolid = entity => ['train', 'ramp', 'barrier', 'gate'].includes(entity.type);
 export const POWERS = ['magnet', 'sneakers', 'multiplier', 'jetpack'];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
@@ -83,6 +90,25 @@ export class Game {
       this.add(power, free, z + 15, { y: 1.4 });
     }
   }
+  moveTraffic(step) {
+    // The track scroll moves every object equally. Only train motion needs lane clearance.
+    for (const entity of this.entities) entity.z += step;
+    const solids = this.entities.filter(isSolid).sort((a, b) => b.z - a.z);
+    for (let index = 0; index < solids.length; index++) {
+      const train = solids[index];
+      if (train.type !== 'train' || !train.moving) continue;
+      let travel = step * .45;
+      // Resolve front to back, including stopped trains, ramps, and barricades.
+      for (let ahead = 0; ahead < index; ahead++) {
+        const obstacle = solids[ahead];
+        if (obstacle.lane !== train.lane) continue;
+        const clearance = obstacle.z - solidHalfLength(obstacle)
+          - (train.z + TRAIN_HALF_LENGTH) - TRAFFIC_GAP;
+        travel = Math.min(travel, Math.max(0, clearance));
+      }
+      train.z += travel;
+    }
+  }
   hit(entity) {
     if (this.grace || this.powers.jetpack) return;
     if (this.board) {
@@ -112,18 +138,18 @@ export class Game {
     }
     this.nextChunk -= step;
     if (this.nextChunk <= 0) { this.spawnChunk(); this.nextChunk += 42; }
-    for (const e of this.entities) e.z += step * (e.moving ? 1.45 : 1);
+    this.moveTraffic(step);
     let floor = 0;
     for (const e of this.entities) {
-      if (Math.abs(e.x - this.x) > 1.24) continue;
+      if (Math.abs(e.x - this.x) >= 1.5) continue;
       if (e.type === 'ramp' && Math.abs(e.z) <= 4) floor = Math.max(floor, (e.z + 4) / 8 * ROOF);
-      if (e.type === 'train' && Math.abs(e.z) <= 7.15 && this.y >= ROOF - .22) floor = Math.max(floor, ROOF);
+      if (e.type === 'train' && Math.abs(e.z) <= TRAIN_HALF_LENGTH && this.y >= ROOF - .22) floor = Math.max(floor, ROOF);
     }
     if (this.powers.jetpack) {
-      this.y += (8 - this.y) * (1 - Math.exp(-7 * dt));
+      this.y += (JETPACK_HEIGHT - this.y) * (1 - Math.exp(-7 * dt));
       this.vy = 0; this.grounded = false; this.slide = 0;
       if (Math.floor((this.distance - step) / 3) !== Math.floor(this.distance / 3)) {
-        for (const l of [-1, 0, 1]) this.add('coin', l, -65, { y: 9.1 });
+        for (const l of [-1, 0, 1]) this.add('coin', l, -65, { y: JETPACK_HEIGHT + 1.1 });
       }
     } else {
       this.vy -= 31 * dt;
@@ -154,7 +180,7 @@ export class Game {
           this.events.push({ type: 'power', power: e.type });
         }
       } else if (e.type !== 'ramp' && dx < 1.5) {
-        const touching = dz < (e.type === 'train' ? 7.25 : .65);
+        const touching = dz < (e.type === 'train' ? TRAIN_HALF_LENGTH : .65);
         if (!touching) continue;
         const collision = e.type === 'train' ? this.y < ROOF - .2
           : e.type === 'barrier' ? this.y < 1.15

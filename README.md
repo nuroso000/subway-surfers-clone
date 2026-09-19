@@ -44,3 +44,8 @@ npm run preview
 `src/game.test.js`: behavior tests for collisions, movement, ramps, powers and spawning.
 
 Serve `dist/` using a static host. Map unknown paths to `404.html`. The development server listens only on localhost. This project has no backend, analytics, external API, or account system. Public deployment is not configured. The original game also has many systems not reproduced here, including its full character catalog, events, economy, social services and production assets.
+
+## Fullscreen and collision updates
+Use the expand button next to sound to enter or exit fullscreen. On browsers that do not expose page fullscreen, the button explains home-screen launch. A manifest and Apple standalone metadata are provided; installation and fullscreen support depend on the browser. No offline support is claimed.
+
+Moving trains now queue behind solid objects in the same lane instead of passing through them. Train-roof support uses the same bounds as collision detection. Bridges, crossbeams and station signs have enough clearance for the full jetpack flight envelope. Regression coverage includes these cases (`npm test`, 17 tests).

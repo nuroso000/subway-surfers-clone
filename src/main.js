@@ -1,4 +1,5 @@
 import './style.css';
+import { setupFullscreen } from './fullscreen.js';
 import { Game, POWER_DURATION } from './game.js';
 import { World } from './world.js';
 const $ = id => document.getElementById(id);
@@ -89,6 +90,13 @@ function openModal(kind) {
   }
   $('modal').showModal();
 }
+setupFullscreen($('fullscreen'), $('fullscreenIcon'), alreadyExpanded => {
+  if (game.state === 'running') pause();
+  $('modalContent').innerHTML = alreadyExpanded
+    ? '<h2>Already fullscreen</h2><p>The game is already running without browser controls.</p>'
+    : '<h2>Play fullscreen</h2><p>This browser cannot open the game in fullscreen here.</p><p>On iPhone, open the page in Safari, tap <b>Share → Add to Home Screen</b>, then launch the saved game. On other phones, use the browser menu to add the game to your home screen if available.</p>';
+  $('modal').showModal();
+}, () => world?.resize());
 $('play').onclick = start; $('pause').onclick = pause;
 $('resume').onclick = () => game.state === 'paused' ? pause() : start();
 $('homeButton').onclick = goHome; $('runners').onclick = () => openModal('runners'); $('help').onclick = () => openModal('help');
@@ -104,6 +112,7 @@ addEventListener('keydown', e => {
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     return;
   }
+  if (e.code === 'Escape' && (document.fullscreenElement || document.webkitFullscreenElement)) return;
   if (e.code === 'Escape' || e.code === 'KeyP') { e.preventDefault(); if (!e.repeat) pause(); return; }
   if (game.state === 'running' && actions[e.code]) { e.preventDefault(); if (!e.repeat) game.action(actions[e.code]); }
   else if (e.code === 'Enter' && game.state === 'home' && !(e.target instanceof HTMLButtonElement)) start();

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { overheadParts, STATION_SIGN } from './track-layout.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LANE_WIDTH, ROOF, POWERS } from './game.js';
@@ -123,21 +124,14 @@ function buildSegment(index) {
       box(g, '#f5d68b', side * 6.3, 1.35, -11, .7, .12, .7, true);
     }
   }
-  if (index % 2 === 0) {
-    for (const x of [-5.6, 5.6]) box(g, '#678d91', x, 3.8, -16, .2, 7.6, .2);
-    box(g, '#678d91', 0, 7.5, -16, 11.4, .28, .25);
-    for (const x of [-3.35, 0, 3.35]) box(g, '#678d91', x, 7.1, -16, .06, .7, .06);
-  }
-  if (index === 4 || index === 9) {
-    for (const side of [-1, 1]) box(g, '#bf7957', side * 6, 4.5, -11, .6, 8, 5);
-    box(g, '#ca8d63', 0, 8, -11, 12.8, 1.3, 5);
-    box(g, '#f4cd91', 0, 8.75, -11, 13.3, .25, 5.3);
+  for (const part of overheadParts(index)) {
+    box(g, part.color, part.x, part.y, part.z, part.width, part.height, part.depth);
   }
   bake(g);
   if (index % 3 === 0) {
     graffiti(g, -6.88, 1.25, -6, Math.PI / 2, .65);
     graffiti(g, 6.88, 1.25, -12, -Math.PI / 2, .7);
-    const stationSign = sign(g, 'CENTRAL', 0, 6.8, -15.82, 3.4, .7);
+    const stationSign = sign(g, 'CENTRAL', 0, STATION_SIGN.y, -15.82, 3.4, STATION_SIGN.height);
     stationSign.userData.overhead = true;
   }
   return g;
