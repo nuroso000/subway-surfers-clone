@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { Game, ROOF } from './game.js';
+function sandbox() { const g = new Game(() => .5); g.reset(); g.entities = []; g.nextChunk = 1e9; return g; }
+function run(g, seconds) { for (let t = 0; t < seconds; t += 1 / 120) g.update(1 / 120); }
+test('lane changes are clamped and smoothly reach their target', () => { const g = sandbox(); g.action('left'); g.action('left'); run(g, .4); assert.equal(g.lane, -1); assert.ok(Math.abs(g.x + 3.35) < .01); });
+test('jump clears a low barrier and lands', () => { const g = sandbox(); g.add('barrier', 0, -7); g.action('jump'); run(g, 1); assert.equal(g.state, 'running'); assert.equal(g.y, 0); });
+test('low barriers collide without a jump', () => { const g = sandbox(); g.add('barrier', 0, -3); run(g, .3); assert.equal(g.state, 'over'); });
+test('roll clears a gate while standing collides', () => { for (const roll of [false, true]) { const g = sandbox(); g.add('gate', 0, -4); if (roll) g.action('slide'); run(g, .4); assert.equal(g.state, roll ? 'running' : 'over'); } });
+test('ramp reaches the roof and character can run along it', () => { const g = sandbox(); g.train(0, -24, true); run(g, 1.15); assert.equal(g.state, 'running'); assert.ok(Math.abs(g.y - ROOF) < .01, `height ${g.y}`); assert.ok(g.roofDistance > 0); run(g, 1.5); assert.equal(g.state, 'running'); assert.equal(g.y, 0); });
+test('train fronts collide and a hoverboard absorbs exactly one collision', () => { const g = sandbox(); g.action('board'); g.add('train', 0, -9); run(g, .2); assert.equal(g.state, 'running'); assert.equal(g.board, 0); assert.equal(g.boards, 2); assert.ok(g.grace > 0); run(g, 3); g.add('train', 0, -8); run(g, .2); assert.equal(g.state, 'over'); });
+test('magnet collects neighboring lane coins', () => { const g = sandbox(); g.powers.magnet = 12; g.add('coin', -1, -5); g.add('coin', 1, -7); run(g, .7); assert.equal(g.coins, 2); });
+test('jetpack bypasses trains and lands safely', () => { const g = sandbox(); g.add('jetpack', 0, -.5); run(g, .1); assert.ok(g.powers.jetpack > 0); g.add('train', 0, -10); run(g, 1); assert.equal(g.state, 'running'); assert.ok(g.y > 7); run(g, 13); assert.equal(g.state, 'running'); assert.equal(g.y, 0); });
+test('sneakers increase jump height and multiplier increases distance points', () => { const normal = sandbox(), powered = sandbox(); powered.powers.sneakers = 12; powered.powers.multiplier = 12; normal.action('jump'); powered.action('jump'); run(normal, .38); run(powered, .38); assert.ok(powered.y > normal.y + 1); assert.ok(Math.abs(powered.score - normal.score * 2) < .01); });
+test('pause freezes simulation and reset clears power-ups and score', () => { const g = sandbox(); g.powers.magnet = 12; g.state = 'paused'; run(g, 1); assert.equal(g.distance, 0); assert.equal(g.powers.magnet, 12); g.reset(); assert.equal(g.powers.magnet, 0); assert.equal(g.score, 0); assert.equal(g.boards, 3); });
+test('procedural chunks always leave at least one obstacle-free lane', () => { for (let i = 0; i < 100; i++) { const g = sandbox(); g.random = () => (i % 3) / 3; g.chunk = i; g.spawnChunk(); const blocked = new Set(g.entities.filter(e => ['train', 'barrier', 'gate'].includes(e.type)).map(e => e.lane)); assert.ok(blocked.size <= 2); } });
